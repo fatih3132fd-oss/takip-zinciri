@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#172554">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Takip Zinciri</title>
+<style>
+:root{--navy:#172554;--blue:#2563eb;--bg:#f3f5fa;--ink:#172033;--muted:#64748b;--line:#e2e8f0;--green:#15803d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+header{background:var(--navy);color:white;padding:22px max(18px,calc((100% - 900px)/2));border-radius:0 0 22px 22px}
+h1{font-size:24px;margin:0 0 4px}header p{margin:0;color:#dbeafe;font-size:13px}
+main{max-width:940px;margin:auto;padding:16px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 16px}
+.stat,.panel,.chain{background:white;border:1px solid var(--line);border-radius:15px}
+.stat{padding:12px 8px;text-align:center}.stat b{display:block;font-size:21px;color:var(--navy)}.stat span{font-size:11px;color:var(--muted)}
+.panel{padding:15px;margin-bottom:16px}.panel h2{font-size:17px;margin:0 0 12px}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}
+label{font-size:12px;font-weight:650;color:#475569}
+input{font:inherit}input[type=text],input[type=date]{width:100%;min-width:0;padding:11px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:var(--ink)}
+button{font:inherit;cursor:pointer}.primary{background:var(--blue);color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:700}
+.secondary{background:white;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:650;color:var(--ink)}
+.chain{padding:0;margin:0 0 14px;box-shadow:0 2px 8px #0f172a08;overflow:hidden}
+.chainhead{padding:14px 15px;border-left:7px solid var(--chain-color,#2563eb);background:var(--chain-tint,#eff6ff);cursor:pointer;align-items:center}
+.chainhead .meta{color:#475569}
+.chainbody{padding:0 15px 15px}
+.chainhead:focus-visible{outline:3px solid #93c5fd;outline-offset:-3px}
+.chainhead .chevron{font-size:18px;color:#475569;transition:transform .15s}
+.chain.collapsed .chevron{transform:rotate(-90deg)}
+.chain.collapsed .chainbody{display:none}
+.colorpick{width:38px;height:34px;padding:2px;border:1px solid #cbd5e1;border-radius:8px;background:white}
+.chainhead{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}.chain h2{font-size:18px;margin:0 0 4px;overflow-wrap:anywhere}
+.meta{font-size:12px;color:var(--muted)}.dayscount{font-weight:700;color:var(--navy)}
+.progress{height:8px;background:#e8edf5;border-radius:20px;overflow:hidden;margin:12px 0 8px}.bar{height:100%;background:var(--blue);border-radius:20px}
+.progressline{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.monthstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:14px 0}
+.monthbox{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:9px}
+.monthbox b{display:block;font-size:15px}.monthbox span{font-size:11px;color:var(--muted)}
+.monthtitle{font-size:13px;font-weight:750;color:#334155;margin:15px 0 8px}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.day{min-width:0;border:1px solid var(--line);border-radius:8px;min-height:43px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px 0;color:var(--ink)}
+.day small{font-size:9px;color:var(--muted)}.day strong{font-size:13px}
+.day.done{background:#dcfce7;border-color:#86efac;color:#166534}.day.done small{color:#166534}
+.day:disabled{opacity:.35;cursor:default}
+.chainactions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.empty{padding:26px 15px;text-align:center;color:var(--muted);background:white;border:1px dashed #cbd5e1;border-radius:15px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.note{font-size:12px;color:var(--muted);line-height:1.5;margin:12px 2px 24px}
+@media(max-width:480px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.day{min-height:39px}.summary{gap:6px}.stat b{font-size:19px}}
+</style>
+</head>
+<body>
+<header><h1>Takip Zinciri</h1><p>Kendi tarih aralığını belirle, istediğin kadar zincir oluştur.</p></header>
+<main>
+<section class="summary">
+ <div class="stat"><b id="totalDone">0</b><span>İşaretlenen gün</span></div>
+ <div class="stat"><b id="totalDays">0</b><span>Toplam takip günü</span></div>
+ <div class="stat"><b id="overall">0%</b><span>Genel ilerleme</span></div>
+</section>
+<section class="panel">
+ <h2>+ Yeni zincir ekle</h2>
+ <form id="addForm" class="formgrid">
+  <div class="field full"><label for="chainName">Zincir adı</label><input id="chainName" type="text" placeholder="Örn. Spor, kitap okuma, ders..." required maxlength="70"></div>
+  <div class="field"><label for="startDate">Başlangıç tarihi</label><input id="startDate" type="date" value="2026-11-07" required></div>
+  <div class="field"><label for="endDate">Bitiş tarihi</label><input id="endDate" type="date" value="2027-04-24" required></div>
+  <div class="field"><label for="chainColor">Başlık rengi</label><input id="chainColor" class="colorpick" type="color" value="#2563eb"></div>
+  <div class="field" style="justify-content:end"><button class="primary" type="submit">Zinciri oluştur</button></div>
+ </form>
+</section>
+<div id="chains"></div>
+<div class="tools">
+ <button class="secondary" id="export">Yedeği indir</button>
+ <button class="secondary" id="importBtn">Yedek yükle</button>
+ <button class="secondary" id="reset">Tüm işaretleri temizle</button>
+ <input id="file" type="file" accept="application/json" hidden>
+</div>
+<p class="note">Veriler bu cihazda saklanır. Uygulamayı çevrimdışı kullanabilirsin. Tarayıcı verilerini silmeden önce yedek indir. Aylık oran, ilgili ayda zincirin kapsadığı günler üzerinden; toplam oran ise tüm tarih aralığı üzerinden hesaplanır.</p>
+</main>
+<script>
+const KEY='takip-zinciri-v2';
+let chains=[];
+try{chains=JSON.parse(localStorage.getItem(KEY))||[]}catch(e){chains=[]}
+if(!Array.isArray(chains))chains=[];
+function save(){localStorage.setItem(KEY,JSON.stringify(chains));stats()}
+function parseDate(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function fmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function datesBetween(a,b){let out=[];for(let d=parseDate(a);d<=parseDate(b);d.setDate(d.getDate()+1))out.push(new Date(d));return out}
+function daysOf(c){return datesBetween(c.start,c.end)}
+function stats(){let total=0,done=0;chains.forEach(c=>{const ds=daysOf(c);total+=ds.length;done+=ds.filter(d=>c.done[fmt(d)]).length});document.getElementById('totalDone').textContent=done;document.getElementById('totalDays').textContent=total;document.getElementById('overall').textContent=(total?Math.round(done/total*100):0)+'%'}
+const months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const weekdays=['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+function render(){
+ const root=document.getElementById('chains');root.innerHTML='';
+ if(!chains.length){root.innerHTML='<div class="empty">Henüz zincir eklemedin. Yukarıdan ilk zincirini oluşturabilirsin.</div>';stats();return}
+ chains.forEach((c,index)=>{
+  if(!c.color)c.color='#2563eb';
+  if(c.collapsed===undefined)c.collapsed=false;
+  const ds=daysOf(c),done=ds.filter(d=>c.done[fmt(d)]).length,pct=ds.length?Math.round(done/ds.length*100):0;
+  const card=document.createElement('section');card.className='chain'+(c.collapsed?' collapsed':'');
+  const tint=(hex)=>{let h=hex.replace('#','');let r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);return `rgba(${r},${g},${b},0.12)`};
+  card.style.setProperty('--chain-color',c.color);
+  card.style.setProperty('--chain-tint',tint(c.color));
+  const head=document.createElement('div');head.className='chainhead';head.tabIndex=0;head.setAttribute('role','button');head.setAttribute('aria-expanded',String(!c.collapsed));
+  const info=document.createElement('div');info.style.flex='1';info.style.minWidth='0';info.innerHTML='<h2></h2><div class="meta"></div>';
+  info.querySelector('h2').textContent=c.name;
+  info.querySelector('.meta').textContent=c.start+' → '+c.end+' · '+ds.length+' gün · '+pct+'% tamamlandı';
+  const count=document.createElement('div');count.className='dayscount';count.textContent=done+'/'+ds.length;
+  const chev=document.createElement('span');chev.className='chevron';chev.textContent='⌄';
+  head.append(info,count,chev);
+  const toggle=()=>{c.collapsed=!c.collapsed;save();render()};
+  head.addEventListener('click',toggle);head.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
+  card.append(head);
+  const body=document.createElement('div');body.className='chainbody';
+  const prog=document.createElement('div');prog.className='progress';const bar=document.createElement('div');bar.className='bar';bar.style.width=pct+'%';prog.append(bar);body.append(prog);
+  const line=document.createElement('div');line.className='progressline';line.innerHTML='<span>'+done+' / '+ds.length+' gün tamamlandı</span><b>'+pct+'% toplam</b>';body.append(line);
+  const monthStats=document.createElement('div');monthStats.className='monthstats';
+  const groups={};ds.forEach(d=>{const key=d.getFullYear()+'-'+d.getMonth();(groups[key]??=[]).push(d)});
+  Object.keys(groups).forEach(key=>{const arr=groups[key],n=arr.filter(d=>c.done[fmt(d)]).length,p=Math.round(n/arr.length*100);const box=document.createElement('div');box.className='monthbox';const [y,m]=key.split('-').map(Number);box.innerHTML='<b>'+months[m]+' '+y+' · '+p+'%</b><span>'+n+' / '+arr.length+' gün tamamlandı</span>';monthStats.append(box)});
+  body.append(monthStats);
+  let last='';
+  ds.forEach(d=>{
+   const mk=d.getFullYear()+'-'+d.getMonth();
+   if(mk!==last){const label=document.createElement('div');label.className='monthtitle';label.textContent=months[d.getMonth()]+' '+d.getFullYear();body.append(label);const grid=document.createElement('div');grid.className='days';body.append(grid);last=mk}
+   const grid=body.lastElementChild,key=fmt(d),btn=document.createElement('button');btn.type='button';btn.className='day'+(c.done[key]?' done':'');btn.innerHTML='<strong>'+d.getDate()+'</strong><small>'+weekdays[d.getDay()]+'</small>';btn.setAttribute('aria-label',key+(c.done[key]?' tamamlandı':' tamamlanmadı'));
+   btn.addEventListener('click',()=>{c.done[key]=!c.done[key];save();render()});grid.append(btn);
+  });
+  const actions=document.createElement('div');actions.className='chainactions';
+  const colorLabel=document.createElement('label');colorLabel.textContent='Başlık rengi';colorLabel.style.display='flex';colorLabel.style.alignItems='center';colorLabel.style.gap='6px';
+  const color=document.createElement('input');color.type='color';color.className='colorpick';color.value=c.color;color.setAttribute('aria-label','Zincir başlık rengi');
+  color.addEventListener('input',()=>{c.color=color.value;save();card.style.setProperty('--chain-color',c.color);card.style.setProperty('--chain-tint',tint(c.color))});
+  colorLabel.append(color);
+  const rename=document.createElement('button');rename.className='secondary';rename.textContent='Adını değiştir';rename.onclick=()=>{const v=prompt('Yeni zincir adı:',c.name);if(v&&v.trim()){c.name=v.trim();save();render()}};
+  const remove=document.createElement('button');remove.className='secondary';remove.textContent='Zinciri sil';remove.onclick=()=>{if(confirm('"'+c.name+'" zinciri ve işaretleri silinsin mi?')){chains.splice(index,1);save();render()}};
+  actions.append(colorLabel,rename,remove);body.append(actions);card.append(body);root.append(card);
+ });stats();
+}
+document.getElementById('addForm').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('chainName').value.trim(),start=document.getElementById('startDate').value,end=document.getElementById('endDate').value;if(!name||!start||!end)return;if(start>end){alert('Bitiş tarihi başlangıç tarihinden önce olamaz.');return}chains.push({id:Date.now().toString(),name,start,end,color:document.getElementById('chainColor').value,collapsed:false,done:{}});save();render();e.target.reset();document.getElementById('startDate').value='2026-11-07';document.getElementById('endDate').value='2027-04-24';document.getElementById('chainColor').value='#2563eb';});
+document.getElementById('export').onclick=()=>{const blob=new Blob([JSON.stringify(chains,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='takip-zinciri-yedek.json';a.click();URL.revokeObjectURL(a.href)};
+document.getElementById('importBtn').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!Array.isArray(x)||x.some(c=>!c.name||!c.start||!c.end||!c.done))throw Error();chains=x;save();render();alert('Yedek yüklendi.')}catch(err){alert('Geçerli bir takip yedeği seç.')}e.target.value=''};
+document.getElementById('reset').onclick=()=>{if(confirm('Bütün zincirlerdeki tüm işaretler silinsin mi? Zincirlerin kendisi korunur.')){chains.forEach(c=>c.done={});save();render()}};
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>
